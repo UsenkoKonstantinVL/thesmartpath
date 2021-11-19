@@ -8,7 +8,9 @@ import constants as const
 DEBUG = True
 
 
-def shrink_or_swell_polygon(coords, shrink_dist=1.0, swell=False):
+def shrink_or_swell_polygon(coords: list,
+                            shrink_dist: float = 1.0,
+                            swell: bool = False):
     """
     Сжимает или расширяет полигон на заданный отступ.
 
@@ -27,16 +29,11 @@ def shrink_or_swell_polygon(coords, shrink_dist=1.0, swell=False):
     else:
         polygon_resized = polygon.buffer(-shrink_dist)  # Сжать
 
-    # Отрисовка в режиме отладки
-    if DEBUG:
-        x, y = polygon.exterior.xy
-        plt.plot(x, y, label="Границы поля")
-        plt.axis('equal')
-
     return list(geometry.mapping(polygon_resized)['coordinates'][0])
 
 
-def nearest_polygon_point(point, polygon_coords):
+def nearest_polygon_point(point: tuple,
+                          polygon_coords: list):
     """
     Находит ближайшую к заданной точке точку на границе полигона.
 
@@ -55,7 +52,8 @@ def nearest_polygon_point(point, polygon_coords):
 
 def build_path(border: list,
                entry_point: tuple,
-               border_step: float) -> list:
+               border_step: float,
+               path_name: str = "1") -> list:
     """
     border: Координаты границ поля в формате масива пар x, y.
             Пример: [(0, 0), (0, 5), (5, 5), (5, 0)]
@@ -71,14 +69,19 @@ def build_path(border: list,
 
     path = [entry_point, start_point] + inner_polygon[1:-1]
 
+    # Отрисовка в режиме отладки
     if DEBUG:
-        plt.scatter(entry_point[0], entry_point[1],
-                    marker='o',
-                    color="red",
-                    label="Точка входа")
+        if path_name == '1':
+            plt.plot(*geometry.Polygon(border).exterior.xy, label="Границы поля")
+            plt.axis('equal')
 
-        plt.plot([p[0] for p in path], [p[1] for p in path],
-                 label="Маршрут")
+            plt.scatter(entry_point[0], entry_point[1],
+                        marker='o',
+                        color="red",
+                        label="Точка входа")
+
+        plt.plot(*geometry.Polygon(path).exterior.xy,
+                 label="Траектория " + path_name)
 
     return path
 
@@ -117,7 +120,14 @@ if __name__ == "__main__":
     path1 = build_path(
         border=border_3,
         entry_point=entry_1,
-        border_step=step
+        border_step=step,
+        path_name='1'
+    )
+    path2 = build_path(
+        border=path1 + [path1[0]],
+        entry_point=entry_1,
+        border_step=step,
+        path_name='2'
     )
 
     if DEBUG:

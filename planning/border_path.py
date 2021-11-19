@@ -1,8 +1,8 @@
-import shapely
-
+import matplotlib.pyplot as plt
 from shapely import geometry
 from shapely.ops import nearest_points
-import matplotlib.pyplot as plt
+
+import constants as const
 
 
 DEBUG = True
@@ -31,11 +31,9 @@ def shrink_or_swell_polygon(coords, shrink_dist=1.0, swell=False):
     if DEBUG:
         x, y = polygon.exterior.xy
         plt.plot(x, y, label="Границы поля")
-        x, y = polygon_resized.exterior.xy
-        plt.plot(x, y, label="Маршрут")
         plt.axis('equal')
 
-    return geometry.mapping(polygon_resized)['coordinates'][0]
+    return list(geometry.mapping(polygon_resized)['coordinates'][0])
 
 
 def nearest_polygon_point(point, polygon_coords):
@@ -71,9 +69,7 @@ def build_path(border: list,
 
     start_point = nearest_polygon_point(entry_point, inner_polygon)
 
-    start_line = geometry.LineString(
-        [entry_point, start_point]
-    )
+    path = [entry_point, start_point] + inner_polygon[1:-1]
 
     if DEBUG:
         plt.scatter(entry_point[0], entry_point[1],
@@ -81,9 +77,10 @@ def build_path(border: list,
                     color="red",
                     label="Точка входа")
 
-        plt.plot(start_line.xy[0], start_line.xy[1])
+        plt.plot([p[0] for p in path], [p[1] for p in path],
+                 label="Маршрут")
 
-    return []
+    return path
 
 
 # test
@@ -115,10 +112,12 @@ if __name__ == "__main__":
     ]
     entry_1 = (3, 2)
 
-    path = build_path(
+    step = const.Geometry.SEEDER_WIDTH / 2
+
+    path1 = build_path(
         border=border_3,
         entry_point=entry_1,
-        border_step=5
+        border_step=step
     )
 
     if DEBUG:

@@ -6,12 +6,13 @@ import matplotlib.pyplot as plt
 if __name__ == '__main__':
     sf = shapefile.Reader(sys.argv[1])
     feature = sf.shapeRecords()[0]
-    first = feature.shape.__geo_interface__  
-    print(first['coordinates'][0]) # (GeoJSON format)
+    first = feature.shape.__geo_interface__ 
+    polygon = first['coordinates'] if isinstance(first['coordinates'], list) else first['coordinates'][0]
+    print(polygon) # (GeoJSON format)
 
     x, y = list(), list()
 
-    for p in first['coordinates'][0]:
+    for p in polygon:
         x.append(p[0])
         y.append(p[1])
 

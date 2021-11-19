@@ -3,7 +3,7 @@ init: envsetup
 
 # Установка зависимостей
 envsetup:
-	python3 -m pip install -r requirements.txt
+	python3.8 -m pip install -r requirements.txt
 
 # Запуск приложения рест-апи
 run:

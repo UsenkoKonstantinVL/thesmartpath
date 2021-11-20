@@ -6,11 +6,7 @@ class Model(QObject):
     def __init__(self):
         super().__init__()
 
-        self.givenGeometry = Polygon()
-        self.givenGeometry.addPoint([0,0])
-        self.givenGeometry.addPoint([10,0])
-        self.givenGeometry.addPoint([10,10])
-        self.givenGeometry.addPoint([0,10])
+        self.givenGeometry = None
         self.tractorPathSeeding = None
         self.tractorPathSprinkling = None
 

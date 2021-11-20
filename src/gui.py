@@ -2,7 +2,7 @@ import PySide2
 from PySide2 import QtGui, QtWidgets
 from PySide2.QtCore import Qt, QMargins
 from PySide2.QtWidgets import (QWidget, QGroupBox, QVBoxLayout, QHBoxLayout, QPushButton,
-                               QFormLayout, QLineEdit, QLabel, QFileDialog)
+                               QFormLayout, QLineEdit, QLabel, QFileDialog, QSizePolicy)
 import shapefile
 from core import Model
 from map import Map
@@ -19,18 +19,18 @@ class Form(QWidget):
 
         # CREATE WIDGETS
         self.map = Map(self.model)
+        # self.map.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.MinimumExpanding)
 
-
-        self.controlBox = QGroupBox("Planning Controls")
         contolBoxLayout = QVBoxLayout()
-        # self.controlBox.setLayout(contolBoxLayout)
 
         self.mapBox = QGroupBox("Path Details")
+        self.mapBox.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         mapBoxLayout = QVBoxLayout()
         self.mapBox.setLayout(mapBoxLayout)
 
         # File loading group
         self.fileGroup = QGroupBox("Source") # we'll create this second layer GBs without text
+        self.fileGroup.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         fileGroupLayout = QVBoxLayout()
         self.fileGroup.setLayout(fileGroupLayout)
 
@@ -42,6 +42,7 @@ class Form(QWidget):
 
         # Parameters group
         self.paramsGroup = QGroupBox("Calc parameters")
+        self.paramsGroup.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
         paramsGroupLayout = QFormLayout()
         self.paramsGroup.setLayout(paramsGroupLayout)
         self.tractorWidthEdit = QLineEdit("2.25")
@@ -59,8 +60,8 @@ class Form(QWidget):
 
         # COMPOSING
 
-        mainLayout.addLayout(contolBoxLayout, 3)
-        mainLayout.addWidget(self.mapBox, 7)
+        mainLayout.addLayout(contolBoxLayout, 3 )
+        mainLayout.addWidget(self.mapBox, 8 )
 
         contolBoxLayout.addWidget(self.fileGroup, 3)
         contolBoxLayout.addWidget(self.paramsGroup, 10)
@@ -72,6 +73,7 @@ class Form(QWidget):
         mapBoxLayout.addWidget(self.map)
         # STYLING
         contolBoxLayout.setContentsMargins(QMargins(0, 0, 0, 0))
+        mainLayout.setSpacing(4)
 
     def keyPressEvent(self, event:PySide2.QtGui.QKeyEvent) -> None:
         if event.key() == Qt.Key_Escape:

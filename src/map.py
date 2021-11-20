@@ -63,7 +63,8 @@ class Map(QWidget):
     # Класс, описывающий поведение карты колхоза
     def __init__(self, core, *args, **kwargs):
         super(Map, self).__init__(*args, **kwargs)
-        self.core = core
+        self.setMouseTracking(True)
+        self.model = core
         self.initUI()
         self._delta = QPointF(100, 0)
         self._sc = 10
@@ -74,6 +75,7 @@ class Map(QWidget):
         self._mapLineColorBold = None
         self._auxObjectsColor = None
         self.needToRepaint = False
+        self.underHover = False
 
         # repaint timer
         self.repaintTimer = QTimer(self)
@@ -141,18 +143,18 @@ class Map(QWidget):
         animationGroup.start()
 
     def findField(self):
-        if self.core.givenGeometry is not None:
-            pointsCount = len(self.core.givenGeometry.points)
+        if self.model.givenGeometry is not None:
+            pointsCount = len(self.model.givenGeometry.points)
             if pointsCount > 0 :
-                print("Polygon length = ", len(self.core.givenGeometry.points))
+                print("Polygon length = ", len(self.model.givenGeometry.points))
 
                 # find field leftes point
-                minX = self.core.givenGeometry.points[0][0]
-                minY = self.core.givenGeometry.points[0][1]
-                maxX = self.core.givenGeometry.points[0][0]
-                maxY = self.core.givenGeometry.points[0][1]
+                minX = self.model.givenGeometry.points[0][0]
+                minY = self.model.givenGeometry.points[0][1]
+                maxX = self.model.givenGeometry.points[0][0]
+                maxY = self.model.givenGeometry.points[0][1]
 
-                for p in self.core.givenGeometry.points:
+                for p in self.model.givenGeometry.points:
                     if p[0] < minX:
                         minX = p[0]
                     if p[1] < minY:
@@ -255,15 +257,23 @@ class Map(QWidget):
         painter.drawText(QPointF(startPoint.x() + barWidth / 2, startPoint.y() - 12), '50')
         painter.drawText(QPointF(startPoint.x() + barWidth, startPoint.y() - 12), self.tr('100 meters'))
 
+    def drawCrossLines(self, painter: QPainter, pos):
+        pen = QPen(Qt.white)
+        painter.setPen(pen)
+        painter.drawLine(0, pos.y(), self.width(), pos.y())
+        painter.drawLine(pos.x(), 0, pos.x(), self.height())
+
     def invertYAxis(self, painter):
         painter.translate(0, self.height())
         painter.scale(1, -1)
 
     def paintEvent(self, e):
         painter = QPainter(self)
-        # painter.beginNativePainting()
         painter.setRenderHint(QPainter.Antialiasing)
 
+        # draw cursor lines if hover
+        if self.underHover:
+            self.drawCrossLines(painter, self.cursor_pos)
         # invert Y axis
         self.invertYAxis(painter)
 
@@ -273,8 +283,8 @@ class Map(QWidget):
         # draw all site objects
         painter.translate(self.delta.x(), self.delta.y())
 
-        if self.core.givenGeometry is not None:
-            self.core.givenGeometry.drawItself(painter, self.sc)
+        if self.model.givenGeometry is not None:
+            self.model.givenGeometry.drawItself(painter, self.sc)
 
         painter.translate(-self.delta.x(), -self.delta.y())
         # invert Y axis back
@@ -290,7 +300,7 @@ class Map(QWidget):
     def mouseMoveEvent(self, e: PySide2.QtGui.QMouseEvent):
         self.cursor_pos = e.pos()
         wordPos = self.getWorldCoords(e.localPos(), self.sc, inversed=True)
-        print("cursor pos: x={}, y={}".format(wordPos.x(), wordPos.y()))
+        # print("cursor pos: x={}, y={}".format(wordPos.x(), wordPos.y()))
         if e.buttons() == Qt.LeftButton:
             # check if control not grab the movement:
             # self.touchControl.mouseMoveEvent(e)
@@ -310,6 +320,13 @@ class Map(QWidget):
 
                 self.startDragging = e.localPos()
         self.callForRepaint()
+
+    def leaveEvent(self, event:PySide2.QtCore.QEvent) -> None:
+        self.underHover = False
+
+    def enterEvent(self, event:PySide2.QtCore.QEvent) -> None:
+        self.underHover = True
+
 
     def mousePressEvent(self, e):
         self.startDragging = e.localPos()

@@ -1,3 +1,5 @@
+import typing as t
+
 import matplotlib.pyplot as plt
 from shapely import geometry
 from shapely.ops import nearest_points
@@ -8,16 +10,21 @@ import constants as const
 DEBUG = True
 
 
-def shrink_or_swell_polygon(coords: list,
+# TODO учет органичений:
+#  - расчет отступов для избежания повторных посевов/поливов, затаптывания посева, выездов за границы и т.д.
+#  - мин. радиус поворота - 5 м.
+
+
+def shrink_or_swell_polygon(coords: t.List[t.Tuple[float, float]],
                             shrink_dist: float = 1.0,
                             swell: bool = False):
     """
     Сжимает или расширяет полигон на заданный отступ.
 
     Args:
-        coords:
-        swell:
-        shrink_dist:
+        coords: Координаты полигона
+        swell: Флаг растягивания/сжатия
+        shrink_dist: Растояние отступа от границы исходного полигона
 
     Returns:
         Координаты полученного полигона
@@ -29,11 +36,14 @@ def shrink_or_swell_polygon(coords: list,
     else:
         polygon_resized = polygon.buffer(-shrink_dist)  # Сжать
 
+    if polygon_resized.is_empty:
+        return []
+
     return list(geometry.mapping(polygon_resized)['coordinates'][0])
 
 
-def nearest_polygon_point(point: tuple,
-                          polygon_coords: list):
+def nearest_polygon_point(point: t.Tuple[float, float],
+                          polygon_coords: t.List[t.Tuple[float, float]]):
     """
     Находит ближайшую к заданной точке точку на границе полигона.
 
@@ -50,8 +60,8 @@ def nearest_polygon_point(point: tuple,
     return p1.x, p1.y
 
 
-def build_path(border: list,
-               entry_point: tuple,
+def build_path(border: t.List[t.Tuple[float, float]],
+               entry_point: t.Tuple[float, float],
                border_step: float,
                path_name: str = "1") -> list:
     """
@@ -62,12 +72,16 @@ def build_path(border: list,
     border_step: Необходимое растояние от границы поля до траектории в метрах.
                  Должно быть равно половине длины агрегата (сеялки/поливалки)
     """
-    inner_polygon = shrink_or_swell_polygon(coords=border,
-                                            shrink_dist=border_step)
-
-    start_point = nearest_polygon_point(entry_point, inner_polygon)
-
-    path = [entry_point, start_point] + inner_polygon[1:-1]
+    inner_polygon = shrink_or_swell_polygon(
+        coords=border,
+        shrink_dist=border_step
+    )
+    if not inner_polygon:
+        print("border_step is too big! Choose smaller value.")
+        path = []
+    else:
+        start_point = nearest_polygon_point(entry_point, inner_polygon)
+        path = [entry_point, start_point] + inner_polygon[:-1]
 
     # Отрисовка в режиме отладки
     if DEBUG:
@@ -79,15 +93,21 @@ def build_path(border: list,
                         marker='o',
                         color="red",
                         label="Точка входа")
-
-        plt.plot(*geometry.Polygon(path).exterior.xy,
-                 label="Траектория " + path_name)
+        if path:
+            plt.plot(*geometry.Polygon(path).exterior.xy,
+                     label="Траектория " + path_name)
 
     return path
 
 
 # test
 if __name__ == "__main__":
+    border_0 = [
+        (0, 0),
+        (0, 10),
+        (10, 0)
+    ]
+
     border_1 = [
         (0, 0),
         (0, 5),
@@ -113,22 +133,26 @@ if __name__ == "__main__":
         (20, 40),
         (20, 10)
     ]
-    entry_1 = (3, 2)
 
-    step = const.Geometry.SEEDER_WIDTH / 2
+    entry_1 = (2, 0)
+
+    step = 0.2
+    step_1 = const.Geometry.SEEDER_WIDTH / 2
 
     path1 = build_path(
-        border=border_3,
+        border=border_1,
         entry_point=entry_1,
         border_step=step,
         path_name='1'
     )
-    path2 = build_path(
-        border=path1 + [path1[0]],
-        entry_point=entry_1,
-        border_step=step,
-        path_name='2'
-    )
+
+    if path1:
+        path2 = build_path(
+            border=path1 + [path1[0]],
+            entry_point=entry_1,
+            border_step=step,
+            path_name='2'
+        )
 
     if DEBUG:
         plt.legend(loc='upper left')

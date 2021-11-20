@@ -1,4 +1,5 @@
 import typing as t
+import json
 
 import matplotlib.pyplot as plt
 from shapely import geometry
@@ -100,6 +101,14 @@ def build_path(border: t.List[t.Tuple[float, float]],
     return path
 
 
+def write_path_to_json(
+        path: t.List[t.Tuple[float, float]],
+        filename: str = 'path.json'
+):
+    with open(filename, 'w') as f:
+        json.dump(path, f, ensure_ascii=False)
+
+
 # test
 if __name__ == "__main__":
     border_0 = [
@@ -153,6 +162,12 @@ if __name__ == "__main__":
             border_step=step,
             path_name='2'
         )
+
+        print(path2)
+
+        write_path_to_json(path=path2)
+
+
 
     if DEBUG:
         plt.legend(loc='upper left')

@@ -71,6 +71,15 @@ class PathSmoother(object):
         return cost
 
     def smooth(self, path):
+        u"""
+        Path smoothing algorythms.
+
+        Args:
+            path (np.ndarray): матрица nx2.
+
+        Return:
+            np.ndarray: матрица nx2.
+        """
         
         solution = optimize.minimize(self.objective, 
                                      x0=path, 
@@ -79,7 +88,7 @@ class PathSmoother(object):
                                      #  method='SLSQP',
                                      tol=self.TOL)#,
 
-        return solution.x
+        return np.array(solution.x).reshape((-1, 2))
 
 
 if __name__ == '__main__':
@@ -114,9 +123,9 @@ if __name__ == '__main__':
 
     print(res)
 
-    for i in range(int(len(res) / 2)):
-        _x.append(res[i*2])
-        _y.append(res[i*2 + 1])
+    for p in res:
+        _x.append(res[0])
+        _y.append(res[1])
 
     plt.plot(_x, _y)
     plt.show()

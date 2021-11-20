@@ -51,7 +51,8 @@ class Converter(object):
         sf = shapefile.Reader(shp_file)
         feature = sf.shapeRecords()[0]
         first = feature.shape.__geo_interface__ 
-        polygon = first['coordinates'] if isinstance(first['coordinates'], list) else first['coordinates'][0] 
+        # polygon = first['coordinates'] if isinstance(first['coordinates'], list) else first['coordinates'][0]
+        polygon = first['coordinates'][0] if isinstance(first['coordinates'][0], list) else first['coordinates']
 
         
         self.z = zone(polygon[0])

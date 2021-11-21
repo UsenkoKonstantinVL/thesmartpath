@@ -2,12 +2,14 @@
 
 import typing as t
 import json
+import numpy as np
 
 import matplotlib.pyplot as plt
 from shapely import geometry
 from shapely.ops import nearest_points
 
 import constants as const
+from coverage_planning import AreaPolygon
 
 
 DEBUG = True
@@ -53,8 +55,8 @@ def __shrink_or_swell_polygon(coords: t.List[t.Tuple[float, float]],
     return list(geometry.mapping(polygon_resized)['coordinates'][0])
 
 
-def __nearest_polygon_point(point: t.Tuple[float, float],
-                            poly: t.List[t.Tuple[float, float]]):
+def nearest_polygon_point(point: t.Tuple[float, float],
+                          poly: t.List[t.Tuple[float, float]]):
     """
     Находит ближайшую к заданной *вне полигона* точке точку на границе полигона.
 
@@ -70,6 +72,32 @@ def __nearest_polygon_point(point: t.Tuple[float, float],
     p1 = nearest_points(poly, point)[0]
     return p1.x, p1.y
 
+def build_n_tracks(border: t.List[t.Tuple[float, float]],
+                   width: float,
+                   n_rows: int) -> t.List[t.List[t.Tuple[float, float]]]:
+    """
+    Строит N треков рядков насаждений.
+
+    Args:
+        border (t.List[t.Tuple[float, float]]): граница.
+        width (float): ширина отступа между входной границей и последним рядом грядков.
+        n_rows (int): количество грядок.
+
+    Return:
+        t.List[t.List[t.Tuple[float, float]]]: список грядок в порядке уменьшения периметра границы.
+
+    """
+    dwidth = width / n_rows
+
+    temp_border = border
+    borders = list()
+    for i in range(n_rows):
+        shrinked_border = __shrink_or_swell_polygon(temp_border, dwidth)
+        borders.append(shrinked_border)
+        temp_border = shrinked_border
+
+    return borders 
+    
 
 def __nearest_polygon_points(point, poly) -> t.Tuple[t.Tuple[float, float],
                                                      t.Tuple[float, float]]:
@@ -156,6 +184,7 @@ def build_path(border: t.List[t.Tuple[float, float]],
                entry_point: t.Tuple[float, float],
                exit_point: t.Tuple[float, float],
                border_step: float,
+               params: dict,
                path_name: str = "1") -> list:
     """
     Строит маршрут вдоль границ площадки
@@ -176,9 +205,18 @@ def build_path(border: t.List[t.Tuple[float, float]],
         print("border_step is too big! Choose smaller value.")
         path = []
     else:
-        start_point = __nearest_polygon_point(entry_point, inner_polygon)
+        start_point = nearest_polygon_point(entry_point, inner_polygon)
+        path = [entry_point, start_point] + inner_polygon[:-1]
 
-        path = [entry_point, start_point] + inner_polygon[:-1] + [start_point]
+    
+    coverage_polygon = None
+    coverage_path, cov_start_point, cov_end_point = find_best_config(coverage_polygon, 20)
+
+    path_to_coverage_start_point = None
+    path_to_end_point = None
+
+    full_path = stitch_path(path, path_to_coverage_start_point, path_to_end_point)
+
 
     # Отрисовка в режиме отладки
     if DEBUG:
@@ -204,6 +242,20 @@ def build_path(border: t.List[t.Tuple[float, float]],
                      label="Траектория " + path_name)
 
     return path
+
+
+def stitch_path(*args):
+    pass
+
+
+def find_best_config(coverage_polygon, ft):
+    conf = list()
+    for angle in np.linspace(-90.0, 90.0, num=90):
+        polygon = AreaPolygon(coverage_polygon, coverage_polygon[0], interior=[], ft=ft, angle=angle)
+        ll = polygon.get_area_coverage()
+        conf.append((ll.length, angle))
+
+    return sorted(conf)[0]
 
 
 def write_path_to_json(

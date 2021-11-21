@@ -357,13 +357,132 @@ def build_path(border: t.List[t.Tuple[float, float]],
 
     return full_path
 
+
+
+def build_path2(border: t.List[t.Tuple[float, float]],
+                entry_point: t.Tuple[float, float],
+                exit_point: t.Tuple[float, float],
+                border_step: float,
+                params: dict,
+                debug_data = {},
+                path_name: str = "1") -> list:
+    """
+    Строит маршрут вдоль границ площадки
+
+    border: Координаты границ поля в формате масива пар x, y.
+            Пример: [(0, 0), (0, 5), (5, 5), (5, 0)]
+    entry_point: Координаты точки входа.
+                 Пример: (0, 0)
+    exit_point: Координаты точки выхода.
+    border_step: Необходимое растояние от границы поля до траектории в метрах.
+                 Должно быть равно половине длины агрегата (сеялки/поливалки)
+    """
+    inner_polygon = __shrink_or_swell_polygon(
+        coords=border,
+        shrink_dist=border_step
+    )
+
+    # inner_polygon = smooth_data(inner_polygon)
+    if not inner_polygon:
+        print("border_step is too big! Choose smaller value.")
+        circle_path = []
+    else:
+        start_point = nearest_polygon_point(entry_point, inner_polygon)
+        circle_path = add_points(inner_polygon[:-1])
+        # circle_path = smooth_data(circle_path)
+        circle_path2 =  __shrink_or_swell_polygon(
+            coords=border,
+            shrink_dist=border_step * 3
+        )
+        start_point2 = nearest_polygon_point(entry_point, circle_path2)
+
+    exit_point_at_cp = nearest_polygon_point(exit_point, circle_path)
+    exit_point_at_cp2 = nearest_polygon_point(exit_point, circle_path2)
+
+    smoothed_circle_path = smooth_coverage_path(circle_path[len(circle_path) - 4: len(circle_path) - 1] + circle_path2[:4])
+    full_circle_path = smooth_data([entry_point, start_point] + circle_path[:5]) + circle_path[5: len(circle_path) - 4] + smoothed_circle_path + circle_path2[4:]
+
+    coverage_polygon = __shrink_or_swell_polygon(
+        coords=border,
+        shrink_dist=border_step * 5
+    )
+    coverage_path, cov_start_point, cov_end_point = find_best_coverage_path(
+        coverage_polygon,
+        circle_path2,
+        start_point,
+        exit_point_at_cp,
+        border_step * 2
+    )
+
+
+    start_point_at_cp = nearest_polygon_point(cov_start_point, circle_path2)
+    end_point_at_cp = nearest_polygon_point(cov_end_point, circle_path2)
+
+    path_to_coverage_start_point, _ = polygon_perimeter_between_points(start_point2,
+                                                                       start_point_at_cp,
+                                                                       circle_path2)
+    path_to_end_point, _ = polygon_perimeter_between_points(end_point_at_cp,
+                                                            exit_point_at_cp2, 
+                                                            circle_path2)
+
+    path_to_end_point = path_to_end_point + [end_point_at_cp] #+ add_points([exit_point_at_cp2, end_point_at_cp, exit_point])
+
+    coverage_path = smooth_coverage_path(path_to_coverage_start_point + coverage_path + path_to_end_point)
+
+    full_path = stitch_path(full_circle_path, coverage_path)
+
+    debug_data['cov_poly'] = coverage_polygon
+
+    # Отрисовка в режиме отладки
+    if DEBUG:
+        if path_name == '1':
+            plt.plot([p[0] for p in border],
+                     [p[1] for p in border],
+                     label="Границы поля")
+            plt.axis('equal')
+
+            plt.scatter(entry_point[0], entry_point[1],
+                        marker='o',
+                        color="green",
+                        label="Точка входа")
+
+            plt.scatter(exit_point[0], exit_point[1],
+                        marker='o',
+                        color="red",
+                        label="Точка выхода")
+
+        if full_path:
+            plt.plot([p[0] for p in full_path],
+                     [p[1] for p in full_path],
+                     label="Траектория " + path_name)
+
+    return full_path 
+
+
+
 def smooth_data(path):
     smoother = PathSmoother(1.0 / 5.0, tol=1e-2)
     x0 = np.array(path)
 
     x0 = x0.reshape((-1))
     res = smoother.smooth(x0)
-    return res
+    return res.tolist()
+
+
+def add_points(poly):
+    big_x0 = list()
+    for i in range(1, len(poly)):
+        p1 = np.array(poly[i-1])
+        p2 = np.array(poly[i])
+        ds = np.linalg.norm(p1-p2)
+
+        if ds < 10:
+            s = [p1.tolist(), p2.tolist()]
+            big_x0.extend(s)
+        else:
+            s = np.linspace(p1, p2, num=int(ds / 10.0))
+            big_x0.extend(s.tolist())
+    return big_x0
 
 
 def smooth_coverage_path(path):

@@ -2,6 +2,8 @@ from PyQt5.QtCore import Qt, QMargins, QObject, pyqtSignal
 from mapObjects import Polygon
 
 from utm import Converter
+from test_cov_plan import build_path
+
 
 import constants
 from border_path import build_path
@@ -11,6 +13,11 @@ from border_path import build_path
 class Model(QObject):
     geometryLoaded = pyqtSignal()
     pointsChanged = pyqtSignal()
+    seedingPathChanged = pyqtSignal()
+    sprinklingPathChanged = pyqtSignal()
+    startLongOperation = pyqtSignal()
+    longOperationFinished = pyqtSignal()
+
     def __init__(self):
         super().__init__()
 
@@ -51,7 +58,28 @@ class Model(QObject):
         self.endPoint = point
         self.pointsChanged.emit()
 
+    def createTestData(self):
+        path = build_path(
+            self.givenGeometry.points,
+            self.entryPoint,
+            self.endPoint,
+            20,
+            {}
+        )
+        print(path)
+        if path:
+            self.tractorPathSeeding = TractorPath(path)
+            self.seedingPathChanged.emit()
+            print('can draw')
+
     def calculate(self):
+        print('core will calculate')
+        self.createTestData()
+
+        # when finish calculating, call:
+        # self.seedingPathChanged.emit()
+        # self.sprinklingPathChanged.emit()
+        # this will let me know that geometry is ready to be displayed
 
         seeder_border_step = self.seederWidth / 2 + 0.05  # 5 см запас
         seeder_path = build_path(

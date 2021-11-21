@@ -93,6 +93,8 @@ class Map(QWidget):
         self.buttons.centerButtonPressed.connect(self.findField)
         self.model.geometryLoaded.connect(self.findField)
         self.model.pointsChanged.connect(self.callForRepaint)
+        self.model.seedingPathChanged.connect(self.callForRepaint)
+        self.model.sprinklingPathChanged.connect(self.callForRepaint)
 
     def resizeEvent(self, event: PySide2.QtGui.QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -341,6 +343,11 @@ class Map(QWidget):
         if self.model.givenGeometry is not None:
             self.model.givenGeometry.drawItself(painter, self.sc)
 
+        if self.model.tractorPathSeeding is not None:
+            self.model.tractorPathSeeding.drawItself(painter, self.sc, color=QColor(255, 114, 12))
+
+        if self.model.tractorPathSprinkling is not None:
+            self.model.tractorPathSprinkling.drawItself(painter, self.sc, color=QColor(12, 240, 255))
 
         # TODO: add drawing for calculated geometry
 

@@ -58,11 +58,19 @@ def test_build_plan():
         border,
         border[0],
         border[-5],
-        20,
+        10,
         {},
         debug_data
     )
 
+
+    _x, _y = list(), list()
+
+    for p in border:
+        _x.append(p[0])
+        _y.append(p[1])
+
+    plt.plot(_x, _y)
 
     _x, _y = list(), list()
 
@@ -71,6 +79,10 @@ def test_build_plan():
         _y.append(p[1])
 
     plt.plot(_x, _y)
+    plt.scatter(_x, _y,
+                marker='o',
+                color="red",
+                label="Точка выхода")
 
     _x, _y = list(), list()
 

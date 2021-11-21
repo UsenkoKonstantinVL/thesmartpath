@@ -11,9 +11,10 @@ from shapely.ops import nearest_points
 
 import constants as const
 from coverage_planning import AreaPolygon
+from smoother import PathSmoother
 
 
-DEBUG = True
+DEBUG = False
 
 # Нужно ли проходить второй (внутренний) круг вдоль границ
 GO_AROUND_TWICE = False
@@ -297,21 +298,23 @@ def build_path(border: t.List[t.Tuple[float, float]],
         circle_path = []
     else:
         start_point = nearest_polygon_point(entry_point, inner_polygon)
-        circle_path = [entry_point, start_point] + inner_polygon[:-1]
+        circle_path = [entry_point, start_point] + inner_polygon[:-1] + [start_point]
+        # circle_path = smooth_data(circle_path)
 
     exit_point_at_cp = nearest_polygon_point(exit_point, circle_path)
 
     coverage_polygon = __shrink_or_swell_polygon(
         coords=inner_polygon,
-        shrink_dist=border_step * 2
+        shrink_dist=border_step
     )
     coverage_path, cov_start_point, cov_end_point = find_best_coverage_path(
         coverage_polygon,
         circle_path,
         start_point,
         exit_point_at_cp,
-        20
+        border_step * 2
     )
+
 
     start_point_at_cp = nearest_polygon_point(cov_start_point, circle_path)
     end_point_at_cp = nearest_polygon_point(cov_end_point, circle_path)
@@ -323,7 +326,9 @@ def build_path(border: t.List[t.Tuple[float, float]],
                                                             exit_point_at_cp, 
                                                             circle_path)
 
-    full_path = stitch_path(circle_path, path_to_coverage_start_point, coverage_path, path_to_end_point + [exit_point])
+    coverage_path = smooth_coverage_path(path_to_coverage_start_point + coverage_path + path_to_end_point + [exit_point])
+
+    full_path = stitch_path(circle_path, coverage_path)
 
     debug_data['cov_poly'] = coverage_polygon
 
@@ -351,6 +356,39 @@ def build_path(border: t.List[t.Tuple[float, float]],
                      label="Траектория " + path_name)
 
     return full_path
+
+def smooth_data(path):
+    smoother = PathSmoother(1.0 / 5.0, tol=1e-2)
+    x0 = np.array(path)
+
+    x0 = x0.reshape((-1))
+    res = smoother.smooth(x0)
+    return res
+
+
+def smooth_coverage_path(path):
+    big_x0 = list()
+    for i in range(1, len(path)):
+        p1 = np.array(path[i-1])
+        p2 = np.array(path[i])
+        ds = np.linalg.norm(p1-p2)
+
+        s = np.linspace(p1, p2, num=int(ds / 10.0))
+        big_x0.extend(s.tolist())
+    
+    # for i in range(5, len(path)):
+    #     p1 = np.array(path[i-1])
+    #     p2 = np.array(path[i])
+    #     ds = np.linalg.norm(p1-p2)
+
+    #     s = np.linspace(p1, p2, num=int(ds / 1.0))
+    #     big_x0.extend(s.tolist())
+    x0 = np.array(big_x0)
+
+    x0 = x0.reshape((-1))
+    smoother = PathSmoother(1.0 / 5.0, tol=1e-2)
+    res = smoother.smooth(x0).tolist()
+    return res
 
 
 def stitch_path(*args):
@@ -396,6 +434,7 @@ def find_best_coverage_path(
     ll = polygon.get_area_coverage()
 
     path = list(ll.coords)
+    path = path[: len(path) - 1]
 
     return path, path[0], path[-1]
 
@@ -412,6 +451,7 @@ def find_best_config(coverage_polygon, ft=20):
     ll = polygon.get_area_coverage()
 
     path = list(zip(ll.xy))
+    path = path[: len(path) - 2]
 
     return path, path[0], path[-1]
 

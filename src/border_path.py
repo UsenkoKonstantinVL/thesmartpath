@@ -64,6 +64,32 @@ def nearest_polygon_point(point: t.Tuple[float, float],
     p1 = nearest_points(poly, point)[0]
     return p1.x, p1.y
 
+def build_n_tracks(border: t.List[t.Tuple[float, float]],
+                   width: float,
+                   n_rows: int) -> t.List[t.List[t.Tuple[float, float]]]:
+    """
+    Строит N треков рядков насаждений.
+
+    Args:
+        border (t.List[t.Tuple[float, float]]): граница.
+        width (float): ширина отступа между входной границей и последним рядом грядков.
+        n_rows (int): количество грядок.
+
+    Return:
+        t.List[t.List[t.Tuple[float, float]]]: список грядок в порядке уменьшения периметра границы.
+
+    """
+    dwidth = width / n_rows
+
+    temp_border = border
+    borders = list()
+    for i in range(n_rows):
+        shrinked_border = __shrink_or_swell_polygon(temp_border, dwidth)
+        borders.append(shrinked_border)
+        temp_border = shrinked_border
+
+    return borders 
+    
 
 def build_path(border: t.List[t.Tuple[float, float]],
                entry_point: t.Tuple[float, float],

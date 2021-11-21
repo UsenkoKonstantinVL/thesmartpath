@@ -274,7 +274,7 @@ def build_path(border: t.List[t.Tuple[float, float]],
                entry_point: t.Tuple[float, float],
                exit_point: t.Tuple[float, float],
                border_step: float,
-               params: dict,
+               params: dict = {},
                debug_data = {},
                path_name: str = "1") -> list:
     """

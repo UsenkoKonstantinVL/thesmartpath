@@ -3,6 +3,8 @@ from mapObjects import Polygon, TractorPath
 
 from utm import Converter
 from test_cov_plan import build_path
+import shapefile
+from shapefile import Writer
 
 class Model(QObject):
     geometryLoaded = pyqtSignal()
@@ -29,7 +31,6 @@ class Model(QObject):
         self.entryPoint = None
         self.endPoint = None
 
-
     def pullGeometryFromFile(self, filename):
         try:
             converter = Converter(filename)
@@ -43,6 +44,16 @@ class Model(QObject):
             self.givenGeometry.addPoint(p)
 
         self.geometryLoaded.emit()
+
+    def exportF(self):
+        print("SHOULD EXPORT")
+        poly = self.tractorPathSeeding.points
+        with shapefile.Writer("export_data.shp", shapefile.POLYGON) as shp:
+            shp.field('Track', 'C')
+
+            shp.poly([poly])
+            shp.record('Seeding')
+
 
     def setEntryPoint(self, point):
         self.entryPoint = point
@@ -74,5 +85,31 @@ class Model(QObject):
         # self.seedingPathChanged.emit()
         # self.sprinklingPathChanged.emit()
         # this will let me know that geometry is ready to be displayed
+
+    def doLongWork(self):
+        # create thread and worker
+        self.threadPool = QThreadPool()
+
+        self.worker = HalCommunicatorWorker(core=self.core)
+        self.killed.connect(self.worker.killMe)
+
+
+class WorkerSignals(QObject):
+    begin = pyqtSignal()
+    end = pyqtSignal()
+
+
+class CalcWorker(QRunnable):
+    def __init__(self):
+        super().__init__()
+        self.signals = WorkerSignals()
+        self.signals.begin.emit()
+
+    def run(self):
+        pass
+        # do work here
+
+        # work finished
+        self.signals.end.emit()
 
 

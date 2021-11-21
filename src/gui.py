@@ -44,6 +44,8 @@ class Form(QWidget):
         self.openButton.clicked.connect(self.openFileButtonCallback)
         self.calcButton = QPushButton(text="Calculate")
         self.calcButton.setEnabled(False)
+        self.exportButton = QPushButton(text="Export...")
+        self.exportButton.clicked.connect(self.model.exportF)
 
         # Parameters group
         self.paramsGroup = QGroupBox("Calc parameters")
@@ -114,6 +116,7 @@ class Form(QWidget):
         fileGroupLayout.addWidget(self.fileName)
         fileGroupLayout.addWidget(self.openButton)
         fileGroupLayout.addWidget(self.calcButton)
+        fileGroupLayout.addWidget(self.exportButton)
 
         mapBoxLayout.addWidget(self.map)
         # STYLING
@@ -144,6 +147,8 @@ class Form(QWidget):
             print("Bye!")
             exit()
 
+
+
     def openFileButtonCallback(self):
         dialog = QFileDialog()
         if dialog.exec_():
@@ -163,6 +168,8 @@ class Form(QWidget):
 
     def calculateGeometry(self):
         print("SHOW MUST GO ON!")
+        self.model.turnRadius = float(self.turnRadiusEdit.text())
+        self.model.calculate()
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])

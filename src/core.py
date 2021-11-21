@@ -8,7 +8,7 @@ from shapefile import Writer
 
 
 import constants as const
-from border_path import build_path
+from border_path import build_path2
 
 
 
@@ -123,17 +123,17 @@ class CalcWorker(QRunnable):
         self.signals.end.emit()
 
         seeder_border_step = self.seederWidth / 2 + 0.05  # пол ширины сеялки + 5 см запас
-        seeder_path = build_path(
-            border=self.givenGeometry.points,
-            entry_point=self.entryPoint,
-            exit_point=self.endPoint,
-            border_step=seeder_border_step,
-            params={},
-            debug_data={},
-        )
+        # seeder_path = build_path2(
+        #     border=self.givenGeometry.points,
+        #     entry_point=self.entryPoint,
+        #     exit_point=self.endPoint,
+        #     border_step=seeder_border_step,
+        #     params={},
+        #     debug_data={},
+        # )
 
         sprinkler_border_step = seeder_border_step + 5 * self.rowWidth  # +5 рядов к отступу сеялки
-        sprinkler_path = build_path(
+        sprinkler_path = build_path2(
             border=self.givenGeometry.points,
             entry_point=self.entryPoint,
             exit_point=self.endPoint,
@@ -142,8 +142,8 @@ class CalcWorker(QRunnable):
             debug_data={},
         )
 
-        self.tractorPathSeeding = TractorPath(points=seeder_path)
-        self.seedingPathChanged.emit()
+        # self.tractorPathSeeding = TractorPath(points=seeder_path)
+        # self.seedingPathChanged.emit()
 
         self.tractorPathSprinkling = TractorPath(points=sprinkler_path)
         self.sprinklingPathChanged.emit()

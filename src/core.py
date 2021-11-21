@@ -5,7 +5,7 @@ from utm import Converter
 from test_cov_plan import build_path
 
 
-import constants
+import constants as const
 from border_path import build_path
 
 
@@ -27,9 +27,12 @@ class Model(QObject):
 
         self.tractorWidth = None
         self.tractorWheelBase = None
-        self.seederWidth = None
-        self.sprinklerWidth = None
-        self.rowWidth = None
+
+        self.seederWidth = const.Geometry.SEEDER_WIDTH
+        self.sprinklerWidth = const.Geometry.SPRINKLER_WIDTH
+
+        self.rowWidth = const.Geometry.SEEDER_ROW_WIDTH
+
         self.turnRadius = None
 
         self.entryPoint = None
@@ -74,28 +77,28 @@ class Model(QObject):
 
     def calculate(self):
         print('core will calculate')
-        self.createTestData()
+        # self.createTestData()
 
         # when finish calculating, call:
         # self.seedingPathChanged.emit()
         # self.sprinklingPathChanged.emit()
         # this will let me know that geometry is ready to be displayed
 
-        seeder_border_step = self.seederWidth / 2 + 0.05  # 5 см запас
+        seeder_border_step = self.seederWidth / 2 + 0.05  # пол ширины сеялки + 5 см запас
         seeder_path = build_path(
             border=self.givenGeometry.points,
             entry_point=self.entryPoint,
-            exit_point=self.exitPoint,
+            exit_point=self.endPoint,
             border_step=seeder_border_step,
             params={},
             debug_data={},
         )
 
-        sprinkler_border_step = seeder_border_step + 5 * self.rowWidth
+        sprinkler_border_step = seeder_border_step + 5 * self.rowWidth  # +5 рядов в отступу сеялки
         sprinkler_path = build_path(
             border=self.givenGeometry.points,
             entry_point=self.entryPoint,
-            exit_point=self.exitPoint,
+            exit_point=self.endPoint,
             border_step=sprinkler_border_step,
             params={},
             debug_data={},
@@ -104,5 +107,5 @@ class Model(QObject):
         self.tractorPathSeeding = TractorPath(points=seeder_path)
         self.seedingPathChanged.emit()
 
-        # self.tractorPathSeeding = TractorPath(points=sprinkler_path)
-        # self.sprinklingPathChanged.emit()
+        self.tractorPathSprinkling = TractorPath(points=sprinkler_path)
+        self.sprinklingPathChanged.emit()

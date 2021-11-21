@@ -162,37 +162,37 @@ def polygon_perimeter_between_points(p1: t.Tuple[float, float],
     return cw_path, cw_len
 
 
-def __build_final_path(start: t.Tuple[float, float],
-                       border_path: t.List[t.Tuple[float, float]],
-                       exit_point: t.Tuple[float, float]) -> t.List[t.Tuple[float, float]]:
-    """
-    Строит финишную траекторию до точки выхода
+# def __build_final_path(start: t.Tuple[float, float],
+#                        border_path: t.List[t.Tuple[float, float]],
+#                        exit_point: t.Tuple[float, float]) -> t.List[t.Tuple[float, float]]:
+#     """
+#     Строит финишную траекторию до точки выхода
 
-    Args:
-        start:
-        border_path:
-        exit_point:
+#     Args:
+#         start:
+#         border_path:
+#         exit_point:
 
-    Returns: Координаты финишной траектории
-    """
-    path = [start]
+#     Returns: Координаты финишной траектории
+#     """
+#     path = [start]
 
-    nearest_border_path_point = __nearest_polygon_point(
-        start,
-        border_path
-    )
-    path.append(nearest_border_path_point)
+#     nearest_border_path_point = __nearest_polygon_point(
+#         start,
+#         border_path
+#     )
+#     path.append(nearest_border_path_point)
 
-    nearest_to_exit = __nearest_polygon_point(
-        exit_point,
-        border_path
-    )
+#     nearest_to_exit = __nearest_polygon_point(
+#         exit_point,
+#         border_path
+#     )
 
-    # TODO main logic
+#     # TODO main logic
 
-    if DEBUG:
-        pass
-    return path
+#     if DEBUG:
+#         pass
+#     return path
 
 
 def build_path(border: t.List[t.Tuple[float, float]],
@@ -234,12 +234,12 @@ def build_path(border: t.List[t.Tuple[float, float]],
     start_point_at_cp = nearest_polygon_point(cov_start_point, circle_path)
     end_point_at_cp = nearest_polygon_point(cov_end_point, circle_path)
 
-    path_to_coverage_start_point = polygon_perimeter_between_points(start_point,
-                                                                    start_point_at_cp,
-                                                                    circle_path)
-    path_to_end_point = polygon_perimeter_between_points(end_point_at_cp,
-                                                         exit_point_at_cp, 
-                                                         circle_path)
+    path_to_coverage_start_point, _ = polygon_perimeter_between_points(start_point,
+                                                                       start_point_at_cp,
+                                                                       circle_path)
+    path_to_end_point, _ = polygon_perimeter_between_points(end_point_at_cp,
+                                                            exit_point_at_cp, 
+                                                            circle_path)
 
     full_path = stitch_path(circle_path, path_to_coverage_start_point, coverage_path, path_to_end_point)
 

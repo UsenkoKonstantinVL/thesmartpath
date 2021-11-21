@@ -7,7 +7,7 @@ from matplotlib.collections import LineCollection
 
 from coverage_planning import AreaPolygon
 from utm import Converter
-from border_path import build_path
+from border_path import build_path, build_path2
 
 def plot_coords(ax, ob):
     x, y = ob.xy
@@ -54,14 +54,20 @@ def test_build_plan():
 
     debug_data = {}
 
-    path = build_path(
+    path = build_path2(
         border,
         border[0],
         border[-5],
-        10,
+        5,
         {},
         debug_data
     )
+
+    wgs_path = conv.to_wgs(path)
+
+    # import json
+    # with open('test.txt', 'w') as f:
+    #     json.dump(wgs_path, f, ensure_ascii=False)
 
 
     _x, _y = list(), list()

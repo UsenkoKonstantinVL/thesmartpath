@@ -1,0 +1,5 @@
+Map {
+    qproperty-mapLineColorLight : rgb(104, 104, 95);
+    qproperty-mapLineColorBold : rgb(40, 56, 56);
+    qproperty-auxObjectsColor: rgb(169, 218, 171);
+}

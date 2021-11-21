@@ -3,6 +3,7 @@
 import typing as t
 import json
 import numpy as np
+from scipy import spatial
 
 import matplotlib.pyplot as plt
 from shapely import geometry
@@ -100,13 +101,13 @@ def build_n_offset_paths(path: t.List[t.Tuple[float, float]],
     for i in range(nright_offset):
         dist = offset * i
         new_path = ls_path.parallel_offset(dist, 'right', join_style=join_style)
-        offset_paths.append(new_path.coords)
+        offset_paths.append(list(new_path.coords))
 
 
     for i in range(nleft_offset):
         dist = offset * i
         new_path = ls_path.parallel_offset(dist, 'left', join_style=join_style)
-        offset_paths.append(new_path.coords)
+        offset_paths.append(list(new_path.coords))
 
     return offset_paths
 
@@ -153,7 +154,21 @@ def __nearest_polygon_points(point, poly) -> t.Tuple[t.Tuple[float, float],
             point = geometry.Point(point)
             if line.distance(point) < 1e-8:
                 return p1, p2
+    print('Here')
 
+def find_point_and_index_of_nearest_point(point, poly):
+    np_point = np.array(point)
+    np_poly = np.array(poly)
+
+    distance, index = spatial.KDTree(np_poly).query(np_point)
+
+    return poly[index], index
+
+def dist_between_points(p1, p2):
+    p1 = np.array(p1)
+    p2 = np.array(p2)
+
+    return np.linalg.norm(p1 - p2)
 
 def polygon_perimeter_between_points(p1: t.Tuple[float, float],
                                      p2: t.Tuple[float, float],
@@ -169,36 +184,57 @@ def polygon_perimeter_between_points(p1: t.Tuple[float, float],
         p2: целевая точка
         poly: полигон
     """
-    start1, start2 = __nearest_polygon_points(p1, poly)
-    end1, end2 = __nearest_polygon_points(p2, poly)
+    start1, start1_idx = find_point_and_index_of_nearest_point(p1, poly)
+    end1, end1_idx = find_point_and_index_of_nearest_point(p2, poly)
 
-    start1_idx = poly.index(start1)
-    start2_idx = poly.index(start2)
+    if start1_idx == end1_idx:
+        return [], 0.0
 
-    end1_idx = poly.index(end1)
-    end2_idx = poly.index(end2)
+    if start1_idx > end1_idx:
+        p_l = len(poly)
+        poly = poly[:] + poly[:]
+        end1_idx += p_l
+
+    full_path = []
+    last_p = start1
+    dist = 0
+    for i in range(start1_idx, end1_idx + 1):
+        cur_p = poly[i]
+        full_path.append(cur_p)
+        dist += dist_between_points(last_p, cur_p)
+        last_p = cur_p
+
+    return full_path, dist
+
+
+
+    # start1_idx = poly.index(start1)
+    # # start2_idx = poly.index(start2)
+
+    # end1_idx = poly.index(end1)
+    # end2_idx = poly.index(end2)
 
     # Длина по часовой
-    cw_len = 0
+    # cw_len = 0
 
-    # Идем по часовой
-    cur_idx = start1_idx
-    cw_path = [p1, poly[cur_idx]]
-    cw_len += geometry.Point(p1).distance(geometry.Point(start1))
-    while cur_idx != end1_idx:
-        cur_p = poly[cur_idx]
-        next_p = poly[cur_idx + 1]
-        cw_path.append(next_p)
-        cw_len += geometry.Point(cur_p).distance(geometry.Point(next_p))
+    # # Идем по часовой
+    # cur_idx = start1_idx
+    # cw_path = [p1, poly[cur_idx]]
+    # cw_len += geometry.Point(p1).distance(geometry.Point(start1))
+    # while cur_idx != end1_idx:
+    #     cur_p = poly[cur_idx]
+    #     next_p = poly[cur_idx + 1]
+    #     cw_path.append(next_p)
+    #     cw_len += geometry.Point(cur_p).distance(geometry.Point(next_p))
 
-        if cur_idx == len(poly) - 1:
-            cur_idx = 0
-        else:
-            cur_idx += 1
-    cw_len += geometry.Point(end1).distance(geometry.Point(p2))
-    cw_path.append(p2)
+    #     if cur_idx == len(poly) - 1:
+    #         cur_idx = 0
+    #     else:
+    #         cur_idx += 1
+    # cw_len += geometry.Point(end1).distance(geometry.Point(p2))
+    # cw_path.append(p2)
 
-    return cw_path, cw_len
+    # return cw_path, cw_len
 
 
 # def __build_final_path(start: t.Tuple[float, float],
@@ -239,6 +275,7 @@ def build_path(border: t.List[t.Tuple[float, float]],
                exit_point: t.Tuple[float, float],
                border_step: float,
                params: dict,
+               debug_data = {},
                path_name: str = "1") -> list:
     """
     Строит маршрут вдоль границ площадки
@@ -268,7 +305,13 @@ def build_path(border: t.List[t.Tuple[float, float]],
         coords=inner_polygon,
         shrink_dist=border_step * 2
     )
-    coverage_path, cov_start_point, cov_end_point = find_best_config(coverage_polygon, 20)
+    coverage_path, cov_start_point, cov_end_point = find_best_coverage_path(
+        coverage_polygon,
+        circle_path,
+        start_point,
+        exit_point_at_cp,
+        20
+    )
 
     start_point_at_cp = nearest_polygon_point(cov_start_point, circle_path)
     end_point_at_cp = nearest_polygon_point(cov_end_point, circle_path)
@@ -280,8 +323,9 @@ def build_path(border: t.List[t.Tuple[float, float]],
                                                             exit_point_at_cp, 
                                                             circle_path)
 
-    full_path = stitch_path(circle_path, path_to_coverage_start_point, coverage_path, path_to_end_point)
+    full_path = stitch_path(circle_path, path_to_coverage_start_point, coverage_path, path_to_end_point + [exit_point])
 
+    debug_data['cov_poly'] = coverage_polygon
 
     # Отрисовка в режиме отладки
     if DEBUG:
@@ -314,6 +358,46 @@ def stitch_path(*args):
     for p in args:
         full_path.extend(p)
     return full_path
+
+def find_best_coverage_path(
+    coverage_polygon,
+    circle_path,
+    start_point,
+    exit_point,
+    ft=20
+):
+    conf = list()
+    for angle in np.linspace(0.0, 90.0, num=91):
+        try:
+            polygon = AreaPolygon(coverage_polygon, coverage_polygon[0], interior=[], ft=ft, angle=angle)
+            ll = polygon.get_area_coverage()
+
+            start_path = list(ll.coords)[0]
+            end_path = list(ll.coords)[-1]
+
+            start_path_on_cp = nearest_polygon_point(start_path, circle_path)
+            end_path_on_cp = nearest_polygon_point(end_path, circle_path)
+
+
+
+            _, l1 = polygon_perimeter_between_points(start_point,
+                                                    start_path_on_cp,
+                                                    circle_path)
+            _, l2 = polygon_perimeter_between_points(end_path_on_cp,
+                                                    exit_point, 
+                                                    circle_path)
+
+            conf.append((ll.length + l1 + l2, angle))
+        except:
+            pass
+
+    best_angle = sorted(conf)[0][1]
+    polygon = AreaPolygon(coverage_polygon, coverage_polygon[0], interior=[], ft=ft, angle=best_angle)
+    ll = polygon.get_area_coverage()
+
+    path = list(ll.coords)
+
+    return path, path[0], path[-1]
 
 
 def find_best_config(coverage_polygon, ft=20):

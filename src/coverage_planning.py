@@ -113,18 +113,29 @@ class AreaPolygon:
             return
         
         lines = [bounded_line]
+
+        found_line = None
+
 #         iterations = int(ceil((self.rP.bounds[2] - self.rP.bounds[0]) / ft)) + 1
         iterations = int((self.rP.bounds[2] - self.rP.bounds[0]) / self.ft) + 2
         for x in range(1, iterations):
             bounded_line = line.parallel_offset(x * self.ft, 'right')
             if self.rP.intersects(bounded_line):
+                if found_line is None:
+                    found_line = self.rP.intersection(bounded_line)
                 try:
                     bounded_line = self.rP.intersection(bounded_line)
                 except TopologicalError as e:
                     error("Problem looking for intersection.", exc_info=1)
                     continue
                 lines.append(bounded_line)
-        return lines, self.rP.intersection(line).coords[0]
+        # print(list(found_line.coords))
+        # print(found_line)
+        if isinstance(found_line, MultiLineString):
+            found_line = found_line.geoms[0]
+            # print(found_line.geoms[0])
+
+        return lines, found_line.coords[0]
 
     def sort_points(self, point, liste):
         "Sorts a set of points by distance to a point"

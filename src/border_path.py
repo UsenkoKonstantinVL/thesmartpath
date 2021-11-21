@@ -203,19 +203,30 @@ def build_path(border: t.List[t.Tuple[float, float]],
     )
     if not inner_polygon:
         print("border_step is too big! Choose smaller value.")
-        path = []
+        circle_path = []
     else:
         start_point = nearest_polygon_point(entry_point, inner_polygon)
-        path = [entry_point, start_point] + inner_polygon[:-1]
+        circle_path = [entry_point, start_point] + inner_polygon[:-1]
 
-    
-    coverage_polygon = None
+    exit_point_at_cp = nearest_polygon_point(exit_point, circle_path)
+
+    coverage_polygon = __shrink_or_swell_polygon(
+        coords=inner_polygon,
+        shrink_dist=border_step * 2
+    )
     coverage_path, cov_start_point, cov_end_point = find_best_config(coverage_polygon, 20)
 
-    path_to_coverage_start_point = None
-    path_to_end_point = None
+    start_point_at_cp = nearest_polygon_point(cov_start_point, circle_path)
+    end_point_at_cp = nearest_polygon_point(cov_end_point, circle_path)
 
-    full_path = stitch_path(path, path_to_coverage_start_point, path_to_end_point)
+    path_to_coverage_start_point = polygon_perimeter_between_points(start_point,
+                                                                    start_point_at_cp,
+                                                                    circle_path)
+    path_to_end_point = polygon_perimeter_between_points(end_point_at_cp,
+                                                         exit_point_at_cp, 
+                                                         circle_path)
+
+    full_path = stitch_path(circle_path, path_to_coverage_start_point, coverage_path, path_to_end_point)
 
 
     # Отрисовка в режиме отладки
@@ -236,26 +247,35 @@ def build_path(border: t.List[t.Tuple[float, float]],
                         color="red",
                         label="Точка выхода")
 
-        if path:
-            plt.plot([p[0] for p in path],
-                     [p[1] for p in path],
+        if full_path:
+            plt.plot([p[0] for p in full_path],
+                     [p[1] for p in full_path],
                      label="Траектория " + path_name)
 
-    return path
+    return full_path
 
 
 def stitch_path(*args):
-    pass
+    full_path = list()
+    for p in args:
+        full_path.extend(p)
+    return full_path
 
 
-def find_best_config(coverage_polygon, ft):
+def find_best_config(coverage_polygon, ft=20):
     conf = list()
     for angle in np.linspace(-90.0, 90.0, num=90):
         polygon = AreaPolygon(coverage_polygon, coverage_polygon[0], interior=[], ft=ft, angle=angle)
         ll = polygon.get_area_coverage()
         conf.append((ll.length, angle))
 
-    return sorted(conf)[0]
+    best_angle = sorted(conf)[0][1]
+    polygon = AreaPolygon(coverage_polygon, coverage_polygon[0], interior=[], ft=ft, angle=best_angle)
+    ll = polygon.get_area_coverage()
+
+    path = list(zip(ll.xy))
+
+    return path, path[0], path[-1]
 
 
 def write_path_to_json(

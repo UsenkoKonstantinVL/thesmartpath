@@ -357,7 +357,7 @@ def build_path2(border: t.List[t.Tuple[float, float]],
                                                             exit_point_at_cp2, 
                                                             circle_path2)
 
-    path_to_end_point = path_to_end_point + [end_point_at_cp] #+ add_points([exit_point_at_cp2, end_point_at_cp, exit_point])
+    path_to_end_point = path_to_end_point + [exit_point] #+ add_points([exit_point_at_cp2, end_point_at_cp, exit_point])
 
     coverage_path = smooth_coverage_path(path_to_coverage_start_point + coverage_path + path_to_end_point)
 

@@ -1,5 +1,5 @@
 from PyQt5.QtCore import Qt, QMargins, QObject, pyqtSignal
-from mapObjects import Polygon
+from mapObjects import Polygon, TractorPath
 
 from utm import Converter
 from test_cov_plan import build_path
@@ -101,5 +101,8 @@ class Model(QObject):
             debug_data={},
         )
 
-        self.tractorPathSeeding = seeder_path
-        self.tractorPathSprinkling = sprinkler_path
+        self.tractorPathSeeding = TractorPath(points=seeder_path)
+        self.seedingPathChanged.emit()
+
+        # self.tractorPathSeeding = TractorPath(points=sprinkler_path)
+        # self.sprinklingPathChanged.emit()

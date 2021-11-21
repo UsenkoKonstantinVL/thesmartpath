@@ -162,6 +162,7 @@ class Form(QWidget):
         self.calcButton.setEnabled(check)
 
     def calculateGeometry(self):
+        self.model.calculate()
         print("SHOW MUST GO ON!")
 
 if __name__ == "__main__":

@@ -33,14 +33,14 @@ class Model(QObject):
 
     def pullGeometryFromFile(self, filename):
         try:
-            converter = Converter(filename)
+            self.converter = Converter(filename)
         except IOError as e:
             print("Reading file error. Operation was aborted")
             print(e)
             return
         self.givenGeometry = Polygon()
 
-        for p in converter.get_cartesian():
+        for p in self.converter.get_cartesian():
             self.givenGeometry.addPoint(p)
 
         self.geometryLoaded.emit()
@@ -48,12 +48,44 @@ class Model(QObject):
     def exportF(self):
         print("SHOULD EXPORT")
         poly = self.tractorPathSeeding.points
-        with shapefile.Writer("export_data.shp", shapefile.POLYGON) as shp:
-            shp.field('Track', 'C')
+        worldPoly = list(self.converter.to_wgs(poly))
+        poly2 = self.tractorPathSprinkling.points
+        worldPoly2 = list(self.converter.to_wgs(poly2))
 
-            shp.poly([poly])
-            shp.record('Seeding')
+        print('worldPoly')
+        print(worldPoly)
+        realWorldPoly = []
+        realWorldPoly2 = []
+        for point in worldPoly:
+            realWorldPoly.append([point[0], point[1]])
+        for point in worldPoly2:
+            realWorldPoly2.append([point[0], point[1]])
 
+        print('real world poly')
+        print(realWorldPoly)
+        # with shapefile.Writer("export_data.shp", shapefile.POLYLINEZ) as shp:
+        #     shp.field('TEXT', "C")
+        #     shp.line([realWorldPoly])
+        #     shp.record(['Seeding'])
+        w = shapefile.Writer('shapefiles/testlines/seeder')
+        w.field('name', 'C')
+
+        w.line([realWorldPoly])
+        w.line([realWorldPoly2])
+
+        w.record('seeder')
+        w.record('sprikler')
+
+        w.close()
+        w = shapefile.Writer('shapefiles/testlines/sprikler')
+        w.field('name', 'C')
+
+        w.line([realWorldPoly2])
+
+        w.record('sprikler')
+
+        w.close()
+        print('finished')
 
     def setEntryPoint(self, point):
         self.entryPoint = point
@@ -74,6 +106,7 @@ class Model(QObject):
         print(path)
         if path:
             self.tractorPathSeeding = TractorPath(path)
+            self.tractorPathSprinkling = TractorPath(path)
             self.seedingPathChanged.emit()
             print('can draw')
 

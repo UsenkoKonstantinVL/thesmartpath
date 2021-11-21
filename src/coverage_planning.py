@@ -35,7 +35,7 @@ class AreaPolygon:
             
         # Determine origin (i.e. closest vertex to current position)
         self.origin = self.get_furthest_point(self.P.exterior.coords, initial_pos)[0]
-        print('Origin: ({}, {}), coords: {}'.format(self.origin[0], self.origin[1], coordinates))
+        # print('Origin: ({}, {}), coords: {}'.format(self.origin[0], self.origin[1], coordinates))
         self.ft = ft
 
 
@@ -50,8 +50,6 @@ class AreaPolygon:
         
         dy = float(coords[max_index][1] - coords[max_index + 1][1])
         dx = float(coords[max_index][0] - coords[max_index + 1][0])
-
-        print(dy, dx, coords[max_index], coords[max_index + 1], coords)
         
         return Rtf(np.degrees(np.math.atan2(dy, dx)))
 
@@ -106,6 +104,8 @@ class AreaPolygon:
         line = LineString([starting_breakdown, (starting_breakdown[0],
                                                 starting_breakdown[1] +
                                                 self.rP.bounds[3] - self.rP.bounds[1])])
+
+        # print('Linestring', self.rP.intersection(line).coords[0])
         try:
             bounded_line = self.rP.intersection(line)
         except TopologicalError as e:
@@ -124,7 +124,7 @@ class AreaPolygon:
                     error("Problem looking for intersection.", exc_info=1)
                     continue
                 lines.append(bounded_line)
-        return lines
+        return lines, self.rP.intersection(line).coords[0]
 
     def sort_points(self, point, liste):
         "Sorts a set of points by distance to a point"
@@ -167,7 +167,9 @@ class AreaPolygon:
     # NOTE: the decomposition of the area will depend on the robot's footprint
     def boustrophedon_decomposition(self, origin):
         """Decompose polygon area according to Boustrophedon area path planning algorithm"""
-        p = self.generate_path()
+        p, orig = self.generate_path()
+        origin = orig
+        # print("generetad path", origin)
         return self.order_points(p, origin)
 
     def get_area_coverage(self, origin=None):
@@ -178,6 +180,11 @@ class AreaPolygon:
         result = self.boustrophedon_decomposition(origin)
         tf_result = self.rotate_from(np.array(result))
         return LineString(tf_result)
+
+def calc_cost_for_angle(angle):
+    polygon = AreaPolygon(ext, ext[0], interior=holes, ft=20, angle=angle)
+    ll = polygon.get_area_coverage()
+    return ll.length
 
 
 def plot_coords(ax, ob):
@@ -202,7 +209,7 @@ if __name__ == '__main__':
     ext = [(0, 0), (4, 4), (5, 6), (0, 8), (-4, 4)]
     holes = [] #[[(0, 3), (2, 3), (1, 6), (-3, 5)]]
     polygon = AreaPolygon(ext, (0, 4), interior=holes, ft=1.0, angle=0.0)
-    print(polygon.rtf.angle)
+    # print(polygon.rtf.angle)
     ll = polygon.get_area_coverage()
     
     # Plotting results
@@ -217,4 +224,4 @@ if __name__ == '__main__':
     plt.rcParams['figure.figsize'] = [50, 50]
     plt.show()
     list(ll.coords)
-    print(ll)
+    # print(ll)

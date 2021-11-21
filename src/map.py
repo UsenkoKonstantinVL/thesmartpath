@@ -5,7 +5,7 @@ from PySide2.QtWidgets import (QApplication, QDialog, QLineEdit, QPushButton, QM
 from PySide2.QtGui import QPainter, QPalette, QColor, QBrush, QPen
 from PySide2.QtCore import (QRect, QRectF, QPoint, QPointF, QSize, QMargins, Qt,
                             Property, Signal, QTimer, QPropertyAnimation, QEasingCurve, QParallelAnimationGroup)
-
+from border_path import nearest_polygon_point
 import math
 import itertools
 import time
@@ -69,6 +69,7 @@ class Map(QWidget):
         self._delta = QPointF(100, 0)
         self._sc = 10
         self.cursor_pos = QPoint(0, 0)
+        self.borderCursor = None
         self.startDragging = None
         self.dragging = False
         self._mapLineColorLight = None
@@ -90,6 +91,8 @@ class Map(QWidget):
         # WIRING
         self.buttons.scaleButtonPressed.connect(self.zoom)
         self.buttons.centerButtonPressed.connect(self.findField)
+        self.model.geometryLoaded.connect(self.findField)
+        self.model.pointsChanged.connect(self.callForRepaint)
 
     def resizeEvent(self, event: PySide2.QtGui.QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -258,10 +261,56 @@ class Map(QWidget):
         painter.drawText(QPointF(startPoint.x() + barWidth, startPoint.y() - 12), self.tr('100 meters'))
 
     def drawCrossLines(self, painter: QPainter, pos):
-        pen = QPen(Qt.white)
+        pen = QPen(Qt.white, 0.75, Qt.DashLine)
         painter.setPen(pen)
         painter.drawLine(0, pos.y(), self.width(), pos.y())
         painter.drawLine(pos.x(), 0, pos.x(), self.height())
+
+        # draw coords DEBUG
+        mapPos = self.getWorldCoords(pos)
+        # painter.drawText(QPoint(pos.x()+5, pos.y()+20), "x: {}\ny:{}".format(mapPos.x(), mapPos.y()))
+        painter.drawText(QPoint(pos.x()+5, pos.y()+20), "x: {}\ny:{}".format(pos.x(), pos.y()))
+        if self.model.entryPoint is None:
+            # draw "enter entry point" near the cursor
+            painter.drawText(QPoint(pos.x()+5, pos.y()-5), "Set Entry Point" )
+        elif self.model.endPoint is None:
+            # draw "enter end point" near the cursor
+            painter.drawText(QPoint(pos.x()+5, pos.y()-5), "Set Exit Point" )
+
+        if self.borderCursor is not None:
+            painter.drawPoint(self.borderCursor)
+            pen.setColor(Qt.yellow)
+            painter.setPen(pen)
+            painter.drawLine(self.borderCursor.x()-15, self.borderCursor.y(), self.borderCursor.x()+15, self.borderCursor.y())
+            painter.drawLine(self.borderCursor.x(), self.borderCursor.y()-15, self.borderCursor.x(), self.borderCursor.y()+15)
+
+    def drawEntryAndEndPoints(self, painter: QPainter):
+        if self.model.entryPoint is not None:
+            pen = QPen(Qt.green, 5, Qt.SolidLine)
+            painter.setPen(pen)
+
+            entryPointDisplayPos = self.getMapCoords(QPointF(self.model.entryPoint[0], self.model.entryPoint[1]), False)
+            painter.drawPoint(entryPointDisplayPos)
+            self.invertYAxis(painter)
+            painter.drawPoint(20, 50)
+            pen.setColor(Qt.lightGray)
+            painter.setPen(pen)
+            painter.drawText(QPoint(25, 55), "Entry Point")
+            self.invertYAxis(painter)
+
+        if self.model.endPoint is not None:
+            pen = QPen(Qt.red, 5, Qt.SolidLine)
+            painter.setPen(pen)
+            endPointDisplayPos = self.getMapCoords(QPointF(self.model.endPoint[0],
+                                                           self.model.endPoint[1]),
+                                                   False)
+            painter.drawPoint(endPointDisplayPos)
+            self.invertYAxis(painter)
+            painter.drawPoint(20, 70)
+            pen.setColor(Qt.lightGray)
+            painter.setPen(pen)
+            painter.drawText(QPoint(25, 75), "End Point")
+            self.invertYAxis(painter)
 
     def invertYAxis(self, painter):
         painter.translate(0, self.height())
@@ -271,6 +320,9 @@ class Map(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
+        # draw warning if no field is loaded yet
+        if self.model.givenGeometry is None:
+            painter.drawText(self.rect(), Qt.AlignVCenter | Qt.AlignHCenter, "Open field file to begin")
         # draw cursor lines if hover
         if self.underHover:
             self.drawCrossLines(painter, self.cursor_pos)
@@ -280,11 +332,17 @@ class Map(QWidget):
         # draw scale net
         self.drawWireNet(painter)
 
+        # draw points
+        self.drawEntryAndEndPoints(painter)
+
         # draw all site objects
         painter.translate(self.delta.x(), self.delta.y())
 
         if self.model.givenGeometry is not None:
             self.model.givenGeometry.drawItself(painter, self.sc)
+
+
+        # TODO: add drawing for calculated geometry
 
         painter.translate(-self.delta.x(), -self.delta.y())
         # invert Y axis back
@@ -301,6 +359,11 @@ class Map(QWidget):
         self.cursor_pos = e.pos()
         wordPos = self.getWorldCoords(e.localPos(), self.sc, inversed=True)
         # print("cursor pos: x={}, y={}".format(wordPos.x(), wordPos.y()))
+        if self.model.givenGeometry is not None:
+            # get map coords:
+            nearestPoint = nearest_polygon_point((wordPos.x(), wordPos.y()), self.model.givenGeometry.points)
+            self.borderCursor = self.getMapCoords(QPointF(nearestPoint[0], nearestPoint[1]), True)
+
         if e.buttons() == Qt.LeftButton:
             # check if control not grab the movement:
             # self.touchControl.mouseMoveEvent(e)
@@ -323,10 +386,10 @@ class Map(QWidget):
 
     def leaveEvent(self, event:PySide2.QtCore.QEvent) -> None:
         self.underHover = False
+        self.borderCursor = None
 
     def enterEvent(self, event:PySide2.QtCore.QEvent) -> None:
         self.underHover = True
-
 
     def mousePressEvent(self, e):
         self.startDragging = e.localPos()
@@ -335,47 +398,28 @@ class Map(QWidget):
     def mouseReleaseEvent(self, e):
         # check if there was no dragging
         # and if wasn't - calculate click on objects
-        # if not self.dragging:
-        #     # get map coords:
-        #     clickCoords = self.getWorldCoords(e.localPos(), inversed=True)
-        #     # собрать все объекты, откликнувшиеся на нажатие
-        #     # отсортировать по расстоянию до их разворота или геометрического центра
-        #     # и выбрать самое близкое
-        #     # так можно будет пережить перехлест объектов
-        #     bestShot = [None, math.inf]
-        #     objectToIterate = itertools.chain(self.core.siteObjects["vehicles"],
-        #                                       [self.core.siteObjects.get("pivotPoint")])
-        #     for veh in objectToIterate:
-        #         if veh is not None:
-        #             distance = veh.isPointInside(Point(clickCoords.x(), clickCoords.y()))
-        #             if distance < bestShot[1] and distance > 0:
-        #                 bestShot[0] = veh
-        #                 bestShot[1] = distance
-        #             else:
-        #                 veh.setSelected(False)
-        #
-        #     if bestShot[0] is not None:
-        #         bestShot[0].setSelected(True)
-        #         if issubclass(type(bestShot[0]), EditableObjects):
-        #             print("This is editable object")
-        #             # self.touchControl.setActive(True)
-        #             self.touchControl.setHidden(False)
-        #             pos = self.getMapCoords(QPointF(bestShot[0].pos.x, bestShot[0].pos.y), inverted=True)
-        #             print("Pos = ", pos.x(), pos.y())
-        #             self.touchControl.move(QPoint(pos.x()-self.touchControl.width()/2,
-        #                                           pos.y()-self.touchControl.height()/2))
-        #             self.touchControl.setTrackingObject(bestShot[0])
-        #         else:
-        #             print("This is'nt editable object")
-        #             # self.touchControl.setActive(False)
-        #             self.touchControl.setHidden(True)
-        #             pass
+        if not self.dragging:
+            if self.model.givenGeometry is not None:
+                # get map coords:
+                clickCoords = self.getWorldCoords(e.localPos(), inversed=True)
+                nearestPoint = nearest_polygon_point((clickCoords.x(), clickCoords.y()), self.model.givenGeometry.points)
+                if self.model.entryPoint is not None:
+                    if self.model.endPoint is None:
+                        # self.model.endPoint = nearestPoint
+                        self.model.setEndPoint(nearestPoint)
+                        # self.model.endPoint = [clickCoords.x(), clickCoords.y()]
+                        print('set endPoint: x: {}, y: {}'.format(nearestPoint[0], nearestPoint[1]))
+                else:
+                    # self.model.entryPoint = nearestPoint
+                    self.model.setEntryPoint(nearestPoint)
+                    # self.model.entryPoint = [clickCoords.x(), clickCoords.y()]
+                    print('set entryPoint: x: {}, y: {}'.format(nearestPoint[0], nearestPoint[1]))
 
         self.dragging = False
         self.startDragging = None
         self.callForRepaint()
 
-    # PROPERTIES ---------------------------------------------------------------------------------
+    # region Properties
     def setMapLineColorLight(self, value):
         self._mapLineColorLight = value
 
@@ -416,5 +460,7 @@ class Map(QWidget):
     auxObjectsColor = Property(QColor, getAuxObjectsColor, setAuxObjectsColor)
     sc = Property(float, getSc, setSc)
     delta = Property(QPointF, getDelta, setDelta)
+
+    # endregion
 
 

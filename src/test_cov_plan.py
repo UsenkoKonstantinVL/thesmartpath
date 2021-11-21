@@ -7,6 +7,7 @@ from matplotlib.collections import LineCollection
 
 from coverage_planning import AreaPolygon
 from utm import Converter
+from border_path import build_path
 
 def plot_coords(ax, ob):
     x, y = ob.xy
@@ -32,6 +33,7 @@ def plot_poly():
     polygon = AreaPolygon(ext, ext[0], interior=holes, ft=10, angle=22.0)
     ll = polygon.get_area_coverage()
 
+
     fig, _ = plt.subplots()
     # ax = fig.add_subplot(121)
     # plt.plot(*polygon.rP.exterior.xy)
@@ -44,6 +46,40 @@ def plot_poly():
     plt.show()
     # list(ll.coords)
     # print(ll)
+
+
+def test_build_plan():
+    conv = Converter(sys.argv[1])
+    border = conv.get_cartesian()
+
+    debug_data = {}
+
+    path = build_path(
+        border,
+        border[0],
+        border[-5],
+        20,
+        {},
+        debug_data
+    )
+
+
+    _x, _y = list(), list()
+
+    for p in path:
+        _x.append(p[0])
+        _y.append(p[1])
+
+    plt.plot(_x, _y)
+
+    _x, _y = list(), list()
+
+    for p in debug_data['cov_poly']:
+        _x.append(p[0])
+        _y.append(p[1])
+
+    plt.plot(_x, _y)
+    plt.show()
 
 
 def find_best():
@@ -61,4 +97,5 @@ def find_best():
 
 
 if __name__ == '__main__':
-    plot_poly()
+    test_build_plan()
+    # find_best()

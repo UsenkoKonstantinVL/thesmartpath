@@ -1,8 +1,8 @@
 # thesmartpath
 
-## Запуск бэкенда:
+## Запуск приложения:
 
 ```
 cd src
-python3 gui.py
+ python3 main.py 
 ```

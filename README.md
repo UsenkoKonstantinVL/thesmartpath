@@ -3,7 +3,6 @@
 ## Запуск бэкенда:
 
 ```
-cd backend
-make init
-make run
+cd src
+python3 gui.py
 ```

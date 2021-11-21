@@ -90,7 +90,7 @@ def __nearest_polygon_points(point, poly) -> t.Tuple[t.Tuple[float, float],
 
 def polygon_perimeter_between_points(p1: t.Tuple[float, float],
                                      p2: t.Tuple[float, float],
-                                     poly: t.List[t.Tuple[float, float]]) -> t.List[t.Tuple[float, float]]:
+                                     poly: t.List[t.Tuple[float, float]]) -> t.Tuple[t.List[t.Tuple[float, float]], float]:
     """
     Находит *кратчайший* (из двух) отрезок периметра полигона
     между двумя точками на этом периметре.
@@ -131,25 +131,40 @@ def polygon_perimeter_between_points(p1: t.Tuple[float, float],
     cw_len += geometry.Point(end1).distance(geometry.Point(p2))
     cw_path.append(p2)
 
-    # Длина против часовой
-    ccw_len = geometry.Polygon(poly).length - cw_len
-    if cw_len <= ccw_len:
-        return cw_path
-    else:
-        # Идем против часовой
-        cur_idx = start2_idx
-        ccw_path = [p1, poly[cur_idx]]
-        while cur_idx != end2_idx:
-            next_p = poly[cur_idx - 1]
-            ccw_path.append(next_p)
+    return cw_path, cw_len
 
-            if cur_idx == 0:
-                cur_idx = -1
-            else:
-                cur_idx -= 1
-        ccw_path.append(p2)
 
-        return ccw_path
+def __build_final_path(start: t.Tuple[float, float],
+                       border_path: t.List[t.Tuple[float, float]],
+                       exit_point: t.Tuple[float, float]) -> t.List[t.Tuple[float, float]]:
+    """
+    Строит финишную траекторию до точки выхода
+
+    Args:
+        start:
+        border_path:
+        exit_point:
+
+    Returns: Координаты финишной траектории
+    """
+    path = [start]
+
+    nearest_border_path_point = __nearest_polygon_point(
+        start,
+        border_path
+    )
+    path.append(nearest_border_path_point)
+
+    nearest_to_exit = __nearest_polygon_point(
+        exit_point,
+        border_path
+    )
+
+    # TODO main logic
+
+    if DEBUG:
+        pass
+    return path
 
 
 def build_path(border: t.List[t.Tuple[float, float]],
@@ -228,8 +243,9 @@ if __name__ == "__main__":
     a = (4, 0)
     b = (7, 10)
 
-    perim = polygon_perimeter_between_points(a, b, poly)
-    print("perim: ", perim)
+    path, path_len = polygon_perimeter_between_points(b, a, poly)
+    print("path: ", path)
+    print("path len: ", path_len)
 
     ###########
     border_0 = [

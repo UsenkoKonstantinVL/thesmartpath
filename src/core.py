@@ -94,7 +94,7 @@ class Model(QObject):
             debug_data={},
         )
 
-        sprinkler_border_step = seeder_border_step + 5 * self.rowWidth  # +5 рядов в отступу сеялки
+        sprinkler_border_step = seeder_border_step + 5 * self.rowWidth  # +5 рядов к отступу сеялки
         sprinkler_path = build_path(
             border=self.givenGeometry.points,
             entry_point=self.entryPoint,

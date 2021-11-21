@@ -64,6 +64,45 @@ def nearest_polygon_point(point: t.Tuple[float, float],
     p1 = nearest_points(poly, point)[0]
     return p1.x, p1.y
 
+
+def build_n_offset_paths(path: t.List[t.Tuple[float, float]], 
+                         nright_offset: int, 
+                         nleft_offset: int, 
+                         offset: float, 
+                         join_style: int = 2) -> t.List[t.List[t.Tuple[float, float]]]:
+    """
+    Построение n рядов со смещение влево и впрово на offset.
+
+    Args:
+        path (t.List[t.Tuple[float, float]]): путь.
+        nright_offset (int): количество траекторий слева.
+        nleft_offset (int): количество траекторий справа.
+        offset (float): смещение в метрах.
+        join_style (int): тип углов, могут быть:
+            1 - round;
+            2 - mitre;
+            3 - bevel;
+            (https://shapely.readthedocs.io/en/stable/manual.html#shapely.geometry.JOIN_STYLE)
+            По дефолту - 2.
+    """
+    ls_path = geometry.LineString(path)
+
+    offset_paths = list()
+
+    for i in range(nright_offset):
+        dist = offset * i
+        new_path = ls_path.parallel_offset(dist, 'right', join_style=join_style)
+        offset_paths.append(new_path.coords)
+
+
+    for i in range(nleft_offset):
+        dist = offset * i
+        new_path = ls_path.parallel_offset(dist, 'left', join_style=join_style)
+        offset_paths.append(new_path.coords)
+
+    return offset_paths
+
+
 def build_n_tracks(border: t.List[t.Tuple[float, float]],
                    width: float,
                    n_rows: int) -> t.List[t.List[t.Tuple[float, float]]]:

@@ -46,18 +46,18 @@ def __shrink_or_swell_polygon(coords: t.List[t.Tuple[float, float]],
 
 
 def __nearest_polygon_point(point: t.Tuple[float, float],
-                            polygon_coords: t.List[t.Tuple[float, float]]):
+                            poly: t.List[t.Tuple[float, float]]):
     """
-    Находит ближайшую к заданной точке точку на границе полигона.
+    Находит ближайшую к заданной *вне полигона* точке точку на границе полигона.
 
     Args:
-        point: Заданная точка
-        polygon_coords: Координаты полигона
+        point: Заданная *вне* границы полигона точка
+        poly: Координаты полигона
 
     Returns:
         Ближайшая точка
     """
-    poly = geometry.Polygon(polygon_coords)
+    poly = geometry.Polygon(poly)
     point = geometry.Point(point)
     p1 = nearest_points(poly, point)[0]
     return p1.x, p1.y

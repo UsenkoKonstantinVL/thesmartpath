@@ -24,11 +24,6 @@ GO_AROUND_TWICE = False
 STOP_DIST = 0.3
 
 
-# TODO учет органичений:
-#  - расчет отступов для избежания повторных посевов/поливов, затаптывания посева, выездов за границы и т.д.
-#  - мин. радиус поворота - 5 м.
-
-
 def __shrink_or_swell_polygon(coords: t.List[t.Tuple[float, float]],
                               shrink_dist: float = 1.0,
                               swell: bool = False):
@@ -205,69 +200,6 @@ def polygon_perimeter_between_points(p1: t.Tuple[float, float],
         last_p = cur_p
 
     return full_path, dist
-
-
-
-    # start1_idx = poly.index(start1)
-    # # start2_idx = poly.index(start2)
-
-    # end1_idx = poly.index(end1)
-    # end2_idx = poly.index(end2)
-
-    # Длина по часовой
-    # cw_len = 0
-
-    # # Идем по часовой
-    # cur_idx = start1_idx
-    # cw_path = [p1, poly[cur_idx]]
-    # cw_len += geometry.Point(p1).distance(geometry.Point(start1))
-    # while cur_idx != end1_idx:
-    #     cur_p = poly[cur_idx]
-    #     next_p = poly[cur_idx + 1]
-    #     cw_path.append(next_p)
-    #     cw_len += geometry.Point(cur_p).distance(geometry.Point(next_p))
-
-    #     if cur_idx == len(poly) - 1:
-    #         cur_idx = 0
-    #     else:
-    #         cur_idx += 1
-    # cw_len += geometry.Point(end1).distance(geometry.Point(p2))
-    # cw_path.append(p2)
-
-    # return cw_path, cw_len
-
-
-# def __build_final_path(start: t.Tuple[float, float],
-#                        border_path: t.List[t.Tuple[float, float]],
-#                        exit_point: t.Tuple[float, float]) -> t.List[t.Tuple[float, float]]:
-#     """
-#     Строит финишную траекторию до точки выхода
-
-#     Args:
-#         start:
-#         border_path:
-#         exit_point:
-
-#     Returns: Координаты финишной траектории
-#     """
-#     path = [start]
-
-#     nearest_border_path_point = __nearest_polygon_point(
-#         start,
-#         border_path
-#     )
-#     path.append(nearest_border_path_point)
-
-#     nearest_to_exit = __nearest_polygon_point(
-#         exit_point,
-#         border_path
-#     )
-
-#     # TODO main logic
-
-#     if DEBUG:
-#         pass
-#     return path
 
 
 def build_path(border: t.List[t.Tuple[float, float]],
